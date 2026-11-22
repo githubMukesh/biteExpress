@@ -1,7 +1,22 @@
-import type { ObjectId } from 'mongodb';
 import type { IGeoPoint } from './normalize.js';
 
 export const SCHEMA_VERSION = 2;
+
+// Deterministic _id from the natural key, so a duplicate insert collides on the
+// mandatory _id index (no separate unique index needed) and seeding is idempotent.
+export function buildRestaurantId(tenantId: string, system: string, sourceId: number): string {
+  return `${tenantId}:${system}:${sourceId}`;
+}
+
+// Public id excludes the tenant, which stays server-side. The internal _id is
+// rebuilt by prepending the tenant from context.
+export function toPublicId(system: string, sourceId: number): string {
+  return `${system}:${sourceId}`;
+}
+
+export function toInternalId(tenantId: string, publicId: string): string {
+  return `${tenantId}:${publicId}`;
+}
 
 export interface IRestaurantSource {
   system: string;
@@ -38,7 +53,7 @@ export interface IRating {
 // One document per restaurant, shaped for the discovery read path so the list
 // screen needs no $lookup. Nullability mirrors real source-data quality.
 export interface IRestaurantDoc {
-  _id: ObjectId;
+  _id: string;
   tenantId: string;
   source: IRestaurantSource;
 

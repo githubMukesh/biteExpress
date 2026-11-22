@@ -61,10 +61,10 @@ async function main(): Promise<void> {
     if (!doc.pricing.priceAvailable) report.unknownPrice += 1;
     if (doc.pricing.currencyAnomaly) report.currencyAnomaly += 1;
 
-    const { createdAt, ...rest } = doc;
+    const { _id, createdAt, ...rest } = doc;
     ops.push({
       updateOne: {
-        filter: { tenantId: doc.tenantId, 'source.sourceId': doc.source.sourceId },
+        filter: { _id },
         update: { $set: rest, $setOnInsert: { createdAt } },
         upsert: true,
       },

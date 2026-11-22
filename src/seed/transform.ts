@@ -8,7 +8,7 @@ import {
   type CoordinateResult,
 } from '../domain/normalize.js';
 import { COUNTRY_BY_CODE, RATING_PRIOR_MIN_VOTES } from '../domain/reference.js';
-import { SCHEMA_VERSION, type IRestaurantDoc } from '../domain/restaurant.js';
+import { buildRestaurantId, SCHEMA_VERSION, type IRestaurantDoc } from '../domain/restaurant.js';
 
 export interface IRawRow {
   'Restaurant ID': string;
@@ -34,7 +34,7 @@ export interface IRawRow {
   Votes: string;
 }
 
-export type TRestaurantInsert = Omit<IRestaurantDoc, '_id'>;
+export type TRestaurantInsert = IRestaurantDoc;
 
 export interface ITransformResult {
   doc: TRestaurantInsert;
@@ -76,10 +76,13 @@ export function rowToRestaurant(row: IRawRow, opts: ITransformOptions): ITransfo
   const average = toNumber(row['Aggregate rating']);
   const votes = toNumber(row.Votes);
   const minVotes = opts.minVotesPrior ?? RATING_PRIOR_MIN_VOTES;
+  const sourceId = toNumber(row['Restaurant ID']);
+  const system = 'zomato_sample';
 
   const doc: TRestaurantInsert = {
+    _id: buildRestaurantId(opts.tenantId, system, sourceId),
     tenantId: opts.tenantId,
-    source: { system: 'zomato_sample', sourceId: toNumber(row['Restaurant ID']) },
+    source: { system, sourceId },
 
     name: row['Restaurant Name'],
     nameNorm: normalizeText(row['Restaurant Name']),

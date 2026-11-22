@@ -4,10 +4,9 @@ import { RESTAURANTS_COLLECTION } from './validator.js';
 // Indexes are hypotheses derived from the endpoint query shapes. Compound keys
 // follow Equality -> Sort -> Range, with _id last for a stable tie-break under
 // pagination. Validate each with explain() on representative data.
+// Duplicate inserts collide on the deterministic _id, so no separate unique
+// index on (tenantId, source.sourceId) is needed.
 export const RESTAURANT_INDEXES: IndexDescription[] = [
-  // Idempotent seed + duplicate check on POST; tenant prefix for multi-tenancy.
-  { key: { tenantId: 1, 'source.sourceId': 1 }, name: 'tenant_source_unique', unique: true },
-
   // Distance filter/sort via $geoNear. Skips docs with no location.
   { key: { location: '2dsphere' }, name: 'location_2dsphere' },
 

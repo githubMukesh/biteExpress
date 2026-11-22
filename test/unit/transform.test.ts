@@ -33,6 +33,7 @@ const opts = { tenantId: 'biteexpress', globalMean: 3.44, now: new Date('2026-01
 describe('rowToRestaurant', () => {
   it('maps a clean India row', () => {
     const { doc } = rowToRestaurant(makeRow(), opts);
+    expect(doc._id).toBe('biteexpress:zomato_sample:123');
     expect(doc.source).toEqual({ system: 'zomato_sample', sourceId: 123 });
     expect(doc.country).toBe('India');
     expect(doc.pricing.currencyCode).toBe('INR');

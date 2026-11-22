@@ -39,3 +39,7 @@ export const CITY_ALIASES: Record<string, string> = {
 // Minimum-vote prior for the Bayesian weighted rating (near the dataset's median
 // vote count of ~60).
 export const RATING_PRIOR_MIN_VOTES = 50;
+
+// Global mean rating used when scoring a single POSTed restaurant. The seed
+// derives the real mean from the data (~3.44); this is the API-time default.
+export const DEFAULT_GLOBAL_RATING_MEAN = 3.44;

@@ -1,0 +1,10 @@
+# Override that swaps MongoDB for atlas-local, which bundles Atlas Search so
+# $search works offline. Layer it over the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.search.yml up
+# (or: make up-search). Run `docker compose down -v` when switching engines so
+# the data volume isn't shared between two different server builds.
+services:
+  mongo:
+    image: mongodb/mongodb-atlas-local:latest
+    healthcheck:
+      start_period: 40s

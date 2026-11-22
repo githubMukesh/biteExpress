@@ -1,14 +1,14 @@
 import { MongoClient, type Db } from 'mongodb';
 import type { Config } from '../config.js';
 
-export interface MongoContext {
+export interface IMongoContext {
   client: MongoClient;
   db: Db;
 }
 
 // One MongoClient per process: the driver pools connections internally, so a
 // client-per-request would exhaust the server under load.
-export async function createMongo(config: Config): Promise<MongoContext> {
+export async function createMongo(config: Config): Promise<IMongoContext> {
   const client = new MongoClient(config.MONGODB_URI, {
     maxPoolSize: config.MONGODB_MAX_POOL_SIZE,
     minPoolSize: config.MONGODB_MIN_POOL_SIZE,
@@ -20,7 +20,7 @@ export async function createMongo(config: Config): Promise<MongoContext> {
   return { client, db: client.db(config.MONGODB_DB) };
 }
 
-export async function mongoPing(ctx: MongoContext): Promise<boolean> {
+export async function mongoPing(ctx: IMongoContext): Promise<boolean> {
   const res = await ctx.db.command({ ping: 1 });
   return res.ok === 1;
 }

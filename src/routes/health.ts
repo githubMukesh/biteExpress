@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { mongoPing, type MongoContext } from '../db/client.js';
+import { mongoPing, type IMongoContext } from '../db/client.js';
 
-export function healthRouter(mongo: MongoContext): Router {
+export function healthRouter(mongo: IMongoContext): Router {
   const router = Router();
 
   router.get('/healthz', (_req, res) => {

@@ -2,11 +2,13 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createLogger } from './logger.js';
 import { createMongo } from './db/client.js';
+import { ensureSchema } from './db/bootstrap.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config);
   const mongo = await createMongo(config);
+  await ensureSchema(mongo.db);
   const app = buildApp({ config, mongo, logger });
 
   const server = app.listen(config.PORT, config.HOST, () => {

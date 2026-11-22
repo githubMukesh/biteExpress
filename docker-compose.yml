@@ -1,0 +1,35 @@
+# One-command demo: `docker compose up` starts MongoDB and the API.
+# A one-shot seed job is added in a later step.
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: 3000
+      HOST: 0.0.0.0
+      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_DB: biteexpress
+      TENANT_ID: biteexpress
+      LOG_LEVEL: info
+
+volumes:
+  mongo-data:

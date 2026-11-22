@@ -31,7 +31,7 @@ const restaurantJsonSchema = {
         required: ['system', 'sourceId'],
         properties: {
           system: { bsonType: 'string' },
-          sourceId: { bsonType: ['int', 'long'] },
+          sourceId: { bsonType: 'number' },
         },
       },
       name: { bsonType: 'string' },
@@ -46,7 +46,7 @@ const restaurantJsonSchema = {
       },
       city: { bsonType: 'string' },
       cityNorm: { bsonType: 'string' },
-      countryCode: { bsonType: ['int', 'long'] },
+      countryCode: { bsonType: 'number' },
       country: { bsonType: 'string' },
       location: {
         bsonType: ['object', 'null'],
@@ -94,12 +94,12 @@ const restaurantJsonSchema = {
         required: ['average', 'votes', 'ratingAvailable', 'weighted'],
         properties: {
           average: { bsonType: 'number', minimum: 0, maximum: 5 },
-          votes: { bsonType: ['int', 'long'], minimum: 0 },
+          votes: { bsonType: 'number', minimum: 0 },
           ratingAvailable: { bsonType: 'bool' },
           weighted: { bsonType: ['number', 'null'], minimum: 0, maximum: 5 },
         },
       },
-      schemaVersion: { bsonType: ['int', 'long'] },
+      schemaVersion: { bsonType: 'number' },
       createdAt: { bsonType: 'date' },
       updatedAt: { bsonType: 'date' },
     },

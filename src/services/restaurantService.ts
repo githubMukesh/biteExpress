@@ -10,10 +10,13 @@ import { ApiError } from '../http/errors.js';
 import { toListItem } from '../http/responses.js';
 import type { RestaurantRepo } from '../repositories/restaurantRepo.js';
 import type { TRestaurantCreate } from '../schemas/restaurant.js';
-import type { TListQuery } from '../schemas/listQuery.js';
+import { listQuerySchema, type TListQuery } from '../schemas/listQuery.js';
 import type { TRestaurantInsert } from '../seed/transform.js';
+import { parseQuery, type IGazetteers } from './nlParser.js';
 
 export class RestaurantService {
+  private gazetteers?: IGazetteers;
+
   constructor(
     private repo: RestaurantRepo,
     private tenantId: string,
@@ -85,5 +88,33 @@ export class RestaurantService {
       limit: q.limit,
       hasNext,
     };
+  }
+
+  async search(rawQuery: Record<string, unknown>) {
+    const q = typeof rawQuery.q === 'string' ? rawQuery.q : '';
+    this.gazetteers ??= await this.repo.loadGazetteers(this.tenantId);
+    const parsed = parseQuery(q, this.gazetteers);
+
+    const hasCoords = rawQuery.lat !== undefined && rawQuery.lng !== undefined;
+    if (parsed.sort === 'distance' && !hasCoords) {
+      throw ApiError.badRequest('This query needs coordinates (lat, lng) to find nearest places');
+    }
+
+    const input: Record<string, unknown> = {};
+    if (parsed.city) input.city = parsed.city;
+    if (parsed.cuisines?.length) input.cuisines = parsed.cuisines.join(',');
+    if (parsed.max_cost_for_two !== undefined) input.max_cost_for_two = parsed.max_cost_for_two;
+    if (parsed.min_rating !== undefined) input.min_rating = parsed.min_rating;
+    if (parsed.sort) input.sort = parsed.sort;
+    if (parsed.name) input.name = parsed.name;
+
+    // Explicit query params override the parsed interpretation.
+    for (const [k, v] of Object.entries(rawQuery)) {
+      if (k !== 'q' && v !== undefined) input[k] = v;
+    }
+
+    const listQuery = listQuerySchema.parse(input);
+    const result = await this.list(listQuery);
+    return { ...result, interpretedQuery: parsed };
   }
 }

@@ -2,6 +2,7 @@ import { type Collection, type Db, type Document } from 'mongodb';
 import type { IRestaurantDoc } from '../domain/restaurant.js';
 import type { TRestaurantInsert } from '../seed/transform.js';
 import type { TListQuery } from '../schemas/listQuery.js';
+import type { IGazetteers } from '../services/nlParser.js';
 import { RESTAURANTS_COLLECTION } from '../db/validator.js';
 import { buildFilter, buildSort, isGeo } from './queryBuilder.js';
 
@@ -57,5 +58,16 @@ export class RestaurantRepo {
       .skip(skip)
       .limit(take)
       .toArray();
+  }
+
+  async loadGazetteers(tenantId: string): Promise<IGazetteers> {
+    const [cities, cuisines] = await Promise.all([
+      this.col.distinct('cityNorm', { tenantId }),
+      this.col.distinct('cuisines', { tenantId }),
+    ]);
+    return {
+      cities: new Set(cities.filter(Boolean)),
+      cuisines: new Set(cuisines.filter(Boolean)),
+    };
   }
 }

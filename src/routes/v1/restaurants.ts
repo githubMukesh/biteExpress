@@ -21,6 +21,10 @@ export function restaurantsRouter(service: RestaurantService): Router {
     res.json(await service.list(q));
   });
 
+  router.get('/search', async (req, res) => {
+    res.json(await service.search(req.query));
+  });
+
   router.get('/:id', async (req, res) => {
     const doc = await service.getById(req.params.id);
     res.json(toRestaurant(doc));

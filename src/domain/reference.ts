@@ -43,3 +43,16 @@ export const RATING_PRIOR_MIN_VOTES = 50;
 // Global mean rating used when scoring a single POSTed restaurant. The seed
 // derives the real mean from the data (~3.44); this is the API-time default.
 export const DEFAULT_GLOBAL_RATING_MEAN = 3.44;
+
+// The dataset has cuisines, not dishes, so a dish query maps to cuisine labels.
+// This is intentionally lossy — real dish search needs a menu collection.
+export const DISH_TO_CUISINE: Record<string, string[]> = {
+  'vada pav': ['street food', 'fast food'],
+  'pav bhaji': ['street food'],
+  dosa: ['south indian'],
+  idli: ['south indian'],
+  biryani: ['biryani', 'mughlai'],
+  momos: ['tibetan', 'chinese'],
+  pizza: ['pizza', 'italian'],
+  burger: ['burger', 'fast food'],
+};

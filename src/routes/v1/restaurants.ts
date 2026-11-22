@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { restaurantCreateSchema } from '../../schemas/restaurant.js';
+import { listQuerySchema } from '../../schemas/listQuery.js';
 import { toRestaurant } from '../../http/responses.js';
 import { toPublicId } from '../../domain/restaurant.js';
 import { ROUTES } from '../paths.js';
@@ -13,6 +14,11 @@ export function restaurantsRouter(service: RestaurantService): Router {
     const doc = await service.create(input);
     const publicId = toPublicId(doc.source.system, doc.source.sourceId);
     res.status(201).location(`${ROUTES.restaurants}/${publicId}`).json(toRestaurant(doc));
+  });
+
+  router.get('/', async (req, res) => {
+    const q = listQuerySchema.parse(req.query);
+    res.json(await service.list(q));
   });
 
   router.get('/:id', async (req, res) => {

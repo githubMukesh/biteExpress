@@ -1,4 +1,5 @@
 import { toPublicId, type IRestaurantDoc } from '../domain/restaurant.js';
+import type { TListResultDoc } from '../repositories/restaurantRepo.js';
 
 export function toRestaurant(doc: IRestaurantDoc) {
   return {
@@ -28,5 +29,22 @@ export function toRestaurant(doc: IRestaurantDoc) {
     },
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+  };
+}
+
+// List item with the brief's required attributes. distanceKm only when a
+// coordinate origin was supplied; averageRating is null for unrated records.
+export function toListItem(doc: TListResultDoc) {
+  return {
+    id: toPublicId(doc.source.system, doc.source.sourceId),
+    name: doc.name,
+    address: doc.address.line,
+    city: doc.city,
+    country: doc.country,
+    cuisines: doc.cuisines,
+    averageRating: doc.rating.ratingAvailable ? doc.rating.average : null,
+    ...(doc.distanceMeters !== undefined
+      ? { distanceKm: Math.round((doc.distanceMeters / 1000) * 100) / 100 }
+      : {}),
   };
 }

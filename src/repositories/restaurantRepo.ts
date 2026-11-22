@@ -1,7 +1,13 @@
-import { type Collection, type Db } from 'mongodb';
+import { type Collection, type Db, type Document } from 'mongodb';
 import type { IRestaurantDoc } from '../domain/restaurant.js';
 import type { TRestaurantInsert } from '../seed/transform.js';
+import type { TListQuery } from '../schemas/listQuery.js';
 import { RESTAURANTS_COLLECTION } from '../db/validator.js';
+import { buildFilter, buildSort, isGeo } from './queryBuilder.js';
+
+const QUERY_MAX_TIME_MS = 5000;
+
+export type TListResultDoc = IRestaurantDoc & { distanceMeters?: number };
 
 export class RestaurantRepo {
   private col: Collection<IRestaurantDoc>;
@@ -17,5 +23,39 @@ export class RestaurantRepo {
 
   async findById(tenantId: string, id: string): Promise<IRestaurantDoc | null> {
     return this.col.findOne({ _id: id, tenantId });
+  }
+
+  // Fetches limit + 1 so the caller can derive hasNext without a separate count.
+  async list(q: TListQuery, tenantId: string): Promise<TListResultDoc[]> {
+    const filter = buildFilter(q, tenantId);
+    const sort = buildSort(q);
+    const skip = (q.page - 1) * q.limit;
+    const take = q.limit + 1;
+
+    if (isGeo(q)) {
+      const pipeline: Document[] = [
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [q.lng, q.lat] },
+            distanceField: 'distanceMeters',
+            spherical: true,
+            query: filter,
+            ...(q.radius_km !== undefined ? { maxDistance: q.radius_km * 1000 } : {}),
+          },
+        },
+      ];
+      if (sort) pipeline.push({ $sort: sort });
+      pipeline.push({ $skip: skip }, { $limit: take });
+      return this.col
+        .aggregate<TListResultDoc>(pipeline, { maxTimeMS: QUERY_MAX_TIME_MS })
+        .toArray();
+    }
+
+    return this.col
+      .find(filter, { maxTimeMS: QUERY_MAX_TIME_MS })
+      .sort(sort ?? {})
+      .skip(skip)
+      .limit(take)
+      .toArray();
   }
 }

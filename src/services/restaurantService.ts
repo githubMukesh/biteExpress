@@ -7,8 +7,10 @@ import {
   RATING_PRIOR_MIN_VOTES,
 } from '../domain/reference.js';
 import { ApiError } from '../http/errors.js';
+import { toListItem } from '../http/responses.js';
 import type { RestaurantRepo } from '../repositories/restaurantRepo.js';
 import type { TRestaurantCreate } from '../schemas/restaurant.js';
+import type { TListQuery } from '../schemas/listQuery.js';
 import type { TRestaurantInsert } from '../seed/transform.js';
 
 export class RestaurantService {
@@ -72,5 +74,16 @@ export class RestaurantService {
     const doc = await this.repo.findById(this.tenantId, toInternalId(this.tenantId, publicId));
     if (!doc) throw ApiError.notFound('Restaurant not found');
     return doc;
+  }
+
+  async list(q: TListQuery) {
+    const docs = await this.repo.list(q, this.tenantId);
+    const hasNext = docs.length > q.limit;
+    return {
+      items: docs.slice(0, q.limit).map(toListItem),
+      page: q.page,
+      limit: q.limit,
+      hasNext,
+    };
   }
 }

@@ -30,9 +30,7 @@ export interface IAddress {
 
 export interface IPricing {
   costForTwo: number;
-  currencySourceLabel: string;
-  currencyCode: string | null;
-  currencyAnomaly: boolean;
+  currencySourceLabel: string; // raw source label; ISO code derived from countryCode at read time
   priceAvailable: boolean; // false when cost is unknown (source 0)
 }
 
@@ -63,8 +61,7 @@ export interface IRestaurantDoc {
   address: IAddress;
   city: string;
   cityNorm: string;
-  countryCode: number;
-  country: string;
+  countryCode: number; // country name + currency derived from this at read time
 
   location: IGeoPoint | null;
   cuisines: string[];

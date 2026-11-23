@@ -15,7 +15,6 @@ const restaurantJsonSchema = {
       'city',
       'cityNorm',
       'countryCode',
-      'country',
       'cuisines',
       'pricing',
       'flags',
@@ -47,7 +46,6 @@ const restaurantJsonSchema = {
       city: { bsonType: 'string' },
       cityNorm: { bsonType: 'string' },
       countryCode: { bsonType: 'number' },
-      country: { bsonType: 'string' },
       location: {
         bsonType: ['object', 'null'],
         required: ['type', 'coordinates'],
@@ -64,18 +62,10 @@ const restaurantJsonSchema = {
       cuisines: { bsonType: 'array', items: { bsonType: 'string' } },
       pricing: {
         bsonType: 'object',
-        required: [
-          'costForTwo',
-          'currencySourceLabel',
-          'currencyCode',
-          'currencyAnomaly',
-          'priceAvailable',
-        ],
+        required: ['costForTwo', 'currencySourceLabel', 'priceAvailable'],
         properties: {
           costForTwo: { bsonType: 'number', minimum: 0 },
           currencySourceLabel: { bsonType: 'string' },
-          currencyCode: { bsonType: ['string', 'null'] },
-          currencyAnomaly: { bsonType: 'bool' },
           priceAvailable: { bsonType: 'bool' },
         },
       },

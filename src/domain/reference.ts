@@ -26,6 +26,17 @@ export const COUNTRY_BY_CODE: Record<number, ICountryRef> = {
   216: { country: 'United States', currencyCode: 'USD' },
 };
 
+// country and currency are pure functions of countryCode, so they are derived at
+// read time rather than stored on the document.
+export function resolveCountryName(countryCode: number): string {
+  return COUNTRY_BY_CODE[countryCode]?.country ?? `Country ${countryCode}`;
+}
+
+export function resolveCurrency(countryCode: number): { code: string | null; anomaly: boolean } {
+  const ref = COUNTRY_BY_CODE[countryCode];
+  return { code: ref?.currencyCode ?? null, anomaly: ref?.currencyAnomaly ?? false };
+}
+
 /* Alternate/modern spellings -> the spelling used in this dataset, compared after
 normalization. Lets a query for "gurugram" match the dataset's "Gurgaon". */
 export const CITY_ALIASES: Record<string, string> = {

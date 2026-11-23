@@ -7,7 +7,7 @@ import {
   yesNoToBool,
   type CoordinateResult,
 } from '../domain/normalize.js';
-import { COUNTRY_BY_CODE, RATING_PRIOR_MIN_VOTES } from '../domain/reference.js';
+import { RATING_PRIOR_MIN_VOTES } from '../domain/reference.js';
 import { buildRestaurantId, SCHEMA_VERSION, type IRestaurantDoc } from '../domain/restaurant.js';
 
 export interface IRawRow {
@@ -68,8 +68,6 @@ export function computeGlobalMean(rows: IRawRow[]): number {
 
 export function rowToRestaurant(row: IRawRow, opts: ITransformOptions): ITransformResult {
   const countryCode = toNumber(row['Country Code']);
-  const ref = COUNTRY_BY_CODE[countryCode];
-
   const coord = parseCoordinates(toNumber(row.Longitude), toNumber(row.Latitude));
 
   const costForTwo = toNumber(row['Average Cost for two']);
@@ -91,7 +89,6 @@ export function rowToRestaurant(row: IRawRow, opts: ITransformOptions): ITransfo
     city: row.City,
     cityNorm: canonicalCity(row.City),
     countryCode,
-    country: ref?.country ?? `Country ${countryCode}`,
 
     location: coord.location,
     cuisines: splitCuisines(row.Cuisines),
@@ -99,8 +96,6 @@ export function rowToRestaurant(row: IRawRow, opts: ITransformOptions): ITransfo
     pricing: {
       costForTwo,
       currencySourceLabel: row.Currency,
-      currencyCode: ref?.currencyCode ?? null,
-      currencyAnomaly: ref?.currencyAnomaly ?? false,
       priceAvailable: costForTwo > 0,
     },
 

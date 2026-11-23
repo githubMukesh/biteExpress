@@ -1,13 +1,15 @@
 import { toPublicId, type IRestaurantDoc } from '../domain/restaurant.js';
+import { resolveCountryName, resolveCurrency } from '../domain/reference.js';
 import type { TListResultDoc } from '../repositories/restaurantRepo.js';
 
 export function toRestaurant(doc: IRestaurantDoc) {
+  const currency = resolveCurrency(doc.countryCode);
   return {
     id: toPublicId(doc.source.system, doc.source.sourceId),
     name: doc.name,
     address: doc.address,
     city: doc.city,
-    country: doc.country,
+    country: resolveCountryName(doc.countryCode),
     countryCode: doc.countryCode,
     location: doc.location
       ? { lng: doc.location.coordinates[0], lat: doc.location.coordinates[1] }
@@ -15,9 +17,9 @@ export function toRestaurant(doc: IRestaurantDoc) {
     cuisines: doc.cuisines,
     pricing: {
       costForTwo: doc.pricing.costForTwo,
-      currencyCode: doc.pricing.currencyCode,
+      currencyCode: currency.code,
       currencySourceLabel: doc.pricing.currencySourceLabel,
-      currencyAnomaly: doc.pricing.currencyAnomaly,
+      currencyAnomaly: currency.anomaly,
       priceAvailable: doc.pricing.priceAvailable,
     },
     flags: doc.flags,
@@ -40,7 +42,7 @@ export function toListItem(doc: TListResultDoc) {
     name: doc.name,
     address: doc.address.line,
     city: doc.city,
-    country: doc.country,
+    country: resolveCountryName(doc.countryCode),
     cuisines: doc.cuisines,
     averageRating: doc.rating.ratingAvailable ? doc.rating.average : null,
     ...(doc.distanceMeters !== undefined

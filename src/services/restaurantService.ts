@@ -1,11 +1,7 @@
 import type { IRestaurantDoc } from '../domain/restaurant.js';
 import { buildRestaurantId, toInternalId, SCHEMA_VERSION } from '../domain/restaurant.js';
 import { canonicalCity, normalizeText, weightedRating } from '../domain/normalize.js';
-import {
-  COUNTRY_BY_CODE,
-  DEFAULT_GLOBAL_RATING_MEAN,
-  RATING_PRIOR_MIN_VOTES,
-} from '../domain/reference.js';
+import { DEFAULT_GLOBAL_RATING_MEAN, RATING_PRIOR_MIN_VOTES } from '../domain/reference.js';
 import { ApiError } from '../http/errors.js';
 import { toListItem } from '../http/responses.js';
 import type { RestaurantRepo } from '../repositories/restaurantRepo.js';
@@ -23,7 +19,6 @@ export class RestaurantService {
   ) {}
 
   async create(input: TRestaurantCreate): Promise<IRestaurantDoc> {
-    const ref = COUNTRY_BY_CODE[input.countryCode];
     const now = new Date();
     const system = input.source?.system ?? 'api';
     const sourceId = input.source?.sourceId ?? Date.now();
@@ -38,7 +33,6 @@ export class RestaurantService {
       city: input.city,
       cityNorm: canonicalCity(input.city),
       countryCode: input.countryCode,
-      country: ref?.country ?? `Country ${input.countryCode}`,
       location: input.location
         ? { type: 'Point', coordinates: [input.location.lng, input.location.lat] }
         : null,
@@ -46,8 +40,6 @@ export class RestaurantService {
       pricing: {
         costForTwo: input.pricing.costForTwo,
         currencySourceLabel: input.pricing.currencySourceLabel,
-        currencyCode: input.pricing.currencyCode ?? ref?.currencyCode ?? null,
-        currencyAnomaly: ref?.currencyAnomaly ?? false,
         priceAvailable: input.pricing.costForTwo > 0,
       },
       flags: input.flags,

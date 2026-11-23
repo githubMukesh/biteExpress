@@ -4,6 +4,7 @@ import { createMongo } from '../db/client.js';
 import { ensureSchema } from '../db/bootstrap.js';
 import { RESTAURANTS_COLLECTION } from '../db/validator.js';
 import type { IRestaurantDoc } from '../domain/restaurant.js';
+import { resolveCurrency } from '../domain/reference.js';
 import { loadRestaurantCsv } from './csv.js';
 import { computeGlobalMean, rowToRestaurant } from './transform.js';
 
@@ -59,7 +60,7 @@ async function main(): Promise<void> {
     if (doc.cuisines.length === 0) report.missingCuisines += 1;
     if (!doc.rating.ratingAvailable) report.unrated += 1;
     if (!doc.pricing.priceAvailable) report.unknownPrice += 1;
-    if (doc.pricing.currencyAnomaly) report.currencyAnomaly += 1;
+    if (resolveCurrency(doc.countryCode).anomaly) report.currencyAnomaly += 1;
 
     const { _id, createdAt, ...rest } = doc;
     ops.push({

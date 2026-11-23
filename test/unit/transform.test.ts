@@ -31,12 +31,12 @@ function makeRow(overrides: Partial<IRawRow> = {}): IRawRow {
 const opts = { tenantId: 'biteexpress', globalMean: 3.44, now: new Date('2026-01-01') };
 
 describe('rowToRestaurant', () => {
-  it('maps a clean India row', () => {
+  it('maps a clean India row (country/currency derived, not stored)', () => {
     const { doc } = rowToRestaurant(makeRow(), opts);
     expect(doc._id).toBe('biteexpress:zomato_sample:123');
     expect(doc.source).toEqual({ system: 'zomato_sample', sourceId: 123 });
-    expect(doc.country).toBe('India');
-    expect(doc.pricing.currencyCode).toBe('INR');
+    expect(doc.countryCode).toBe(1);
+    expect(doc).not.toHaveProperty('country');
     expect(doc.cityNorm).toBe('gurgaon');
     expect(doc.cuisines).toEqual(['south indian', 'north indian']);
     expect(doc.location).toEqual({ type: 'Point', coordinates: [77.09, 28.49] });
@@ -44,15 +44,14 @@ describe('rowToRestaurant', () => {
     expect(doc.rating.weighted).not.toBeNull();
   });
 
-  it('flags the Philippines currency anomaly without rewriting it', () => {
+  it('preserves the raw currency label for the Philippines anomaly', () => {
     const { doc } = rowToRestaurant(
       makeRow({ 'Country Code': '162', Currency: 'Botswana Pula(P)' }),
       opts,
     );
-    expect(doc.country).toBe('Philippines');
+    expect(doc.countryCode).toBe(162);
     expect(doc.pricing.currencySourceLabel).toBe('Botswana Pula(P)');
-    expect(doc.pricing.currencyCode).toBeNull();
-    expect(doc.pricing.currencyAnomaly).toBe(true);
+    expect(doc.pricing).not.toHaveProperty('currencyCode');
   });
 
   it('omits location for (0,0) and reports the status', () => {

@@ -14,7 +14,6 @@ export const restaurantCreateSchema = z.object({
     .object({
       costForTwo: z.number().min(0).default(0),
       currencySourceLabel: z.string().default(''),
-      currencyCode: z.string().nullable().optional(),
     })
     .default({ costForTwo: 0, currencySourceLabel: '' }),
   flags: z

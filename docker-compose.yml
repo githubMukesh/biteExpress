@@ -20,9 +20,13 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_URI: mongodb://mongo:27017/?directConnection=true
       MONGODB_DB: biteexpress
       TENANT_ID: biteexpress
+    # Mounts the host dataset when present (run scripts/download-data.sh) → full
+    # 9,551 rows. If data/ is empty, the seed falls back to the committed fixture.
+    volumes:
+      - ./data:/app/data:ro
     command: ['node', 'dist/seed/run.js']
     restart: 'no'
 
@@ -39,7 +43,7 @@ services:
     environment:
       PORT: 3000
       HOST: 0.0.0.0
-      MONGODB_URI: mongodb://mongo:27017
+      MONGODB_URI: mongodb://mongo:27017/?directConnection=true
       MONGODB_DB: biteexpress
       TENANT_ID: biteexpress
       LOG_LEVEL: info

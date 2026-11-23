@@ -220,3 +220,11 @@ test/                  unit + integration
 fixtures/              committed 50-row sample
 scripts/               download-data.sh
 ```
+
+---
+
+## Resources & disclosure
+
+- **AI coding assistant** — used during development.
+- **MongoDB documentation and best-practice guidance** (schema design, indexing, connection handling) informed the data model and index choices.
+- **Dataset** — the public Zomato Restaurants dataset (Kaggle).

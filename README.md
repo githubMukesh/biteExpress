@@ -78,21 +78,19 @@ Flipping one flag lights up a managed capability with zero application changes �
 
 ## Data
 
-The seed prefers the full dataset and falls back to a committed sample:
+The **full 9,551-row dataset loads by default.** The seed resolves its source in order:
 
-| Path | Committed | Rows | Used when |
-|------|-----------|------|-----------|
-| `fixtures/zomato.sample.csv` | yes | 50 | `data/zomato.csv` is absent (Docker default) |
-| `data/zomato.csv` | no (gitignored) | 9,551 | present after running the download script |
+1. **`data/zomato.csv`** if present (committed? no — gitignored; e.g. you pre-downloaded or mounted it)
+2. **Download from Kaggle** — cached in a temp dir, done automatically when 1 is missing
+3. **Committed 50-row fixture** (`fixtures/zomato.sample.csv`) if the download is unavailable — keeps it fully **offline-capable**
 
-To seed the full dataset:
+So `docker compose up` seeds all 9,551 rows when online, and still works offline with the fixture. The seed is idempotent (upserts on a deterministic `_id`) and logs which source it used plus a data-quality report (rows read, located, coordinate issues, unrated, unknown price, currency anomalies).
+
+Pre-download to avoid the per-seed fetch (optional — populates the gitignored `data/`):
 
 ```bash
-./scripts/download-data.sh      # downloads + unzips into data/ (gitignored)
-npm run seed                    # re-seed; idempotent
+./scripts/download-data.sh
 ```
-
-The seed is idempotent (upserts on a deterministic `_id`) and prints a data-quality report (rows read, located, coordinate issues, unrated, unknown price, currency anomalies).
 
 ---
 

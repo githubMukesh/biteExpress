@@ -1,24 +1,27 @@
 # Override that swaps MongoDB for atlas-local, which bundles Atlas Search so
 # $search works offline. Layer it over the base file:
-#   docker compose -f docker-compose.yml -f docker-compose.search.yml up
-# (or: make up-search). Run `docker compose down -v` when switching engines so
-# the data volume isn't shared between two different server builds.
+#   docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
+# (or: make mongo-atlas).
 services:
   mongo:
     image: mongodb/mongodb-atlas-local:latest
-    # atlas-local runs a replica set with a keyfile it generates in /data/configdb
-    # on first init. Persist BOTH that dir and /data/db (and keep them off mongo:8's
-    # volume), so the keyfile survives container recreation on down/up.
+    # Ephemeral tmpfs storage so atlas-local regenerates its replica-set keyfile
+    # on every start — this avoids the stale/corrupt-keyfile failures that volume
+    # persistence causes after an interrupted init. The seed re-runs on each `up`,
+    # so persisting the data buys nothing for the demo. mode 1777 (world-writable,
+    # sticky — like /tmp) lets the non-root atlas user create the keyfile.
     volumes:
-      - mongo-atlas-data:/data/db
-      - mongo-atlas-config:/data/configdb
+      - type: tmpfs
+        target: /data/db
+        tmpfs:
+          mode: 01777
+      - type: tmpfs
+        target: /data/configdb
+        tmpfs:
+          mode: 01777
     healthcheck:
       start_period: 40s
 
   api:
     environment:
       SEARCH_ENGINE: atlas
-
-volumes:
-  mongo-atlas-data:
-  mongo-atlas-config:

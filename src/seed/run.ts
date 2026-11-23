@@ -5,7 +5,8 @@ import { ensureSchema } from '../db/bootstrap.js';
 import { RESTAURANTS_COLLECTION } from '../db/validator.js';
 import type { IRestaurantDoc } from '../domain/restaurant.js';
 import { resolveCurrency } from '../domain/reference.js';
-import { loadRestaurantCsv } from './csv.js';
+import { loadCsv } from './csv.js';
+import { resolveDataset } from './dataset.js';
 import { computeGlobalMean, rowToRestaurant } from './transform.js';
 
 const BATCH_SIZE = 1000;
@@ -26,8 +27,9 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const encoding = (process.env.SEED_ENCODING as BufferEncoding) ?? 'latin1';
 
-  const { rows, sourcePath, usedFixture } = loadRestaurantCsv(encoding);
-  console.log(`Seeding from ${sourcePath}${usedFixture ? ' (fixture)' : ''} — ${rows.length} rows`);
+  const dataset = await resolveDataset((msg) => console.log(msg));
+  const rows = loadCsv(dataset.path, encoding);
+  console.log(`Seeding from ${dataset.path} [${dataset.source}] — ${rows.length} rows`);
 
   const globalMean = computeGlobalMean(rows);
   const now = new Date();

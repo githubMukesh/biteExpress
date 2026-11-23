@@ -2,23 +2,18 @@
 # $search works offline. Layer it over the base file:
 #   docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
 # (or: make mongo-atlas).
+#
+# Anonymous volumes (no named source) give atlas-local a FRESH data dir on every
+# container creation. atlas-local initializes its replica set using the container
+# hostname and generates its keyfile on a clean /data/db — persisting those across
+# recreation breaks it (stale rs hostname / corrupt keyfile). The seed re-runs on
+# each `up`, so a fresh start loses nothing and always initializes cleanly.
 services:
   mongo:
     image: mongodb/mongodb-atlas-local:latest
-    # Ephemeral tmpfs storage so atlas-local regenerates its replica-set keyfile
-    # on every start — this avoids the stale/corrupt-keyfile failures that volume
-    # persistence causes after an interrupted init. The seed re-runs on each `up`,
-    # so persisting the data buys nothing for the demo. mode 1777 (world-writable,
-    # sticky — like /tmp) lets the non-root atlas user create the keyfile.
     volumes:
-      - type: tmpfs
-        target: /data/db
-        tmpfs:
-          mode: 01777
-      - type: tmpfs
-        target: /data/configdb
-        tmpfs:
-          mode: 01777
+      - /data/db
+      - /data/configdb
     healthcheck:
       start_period: 40s
 

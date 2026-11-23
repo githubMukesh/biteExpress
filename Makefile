@@ -1,11 +1,11 @@
-.PHONY: up up-search down seed test lint typecheck
+.PHONY: mongo-local mongo-atlas down seed test lint typecheck
 
-# Default demo: mongo:8 + seed + api
-up:
+# Self-managed MongoDB (mongo:8) — models the on-prem setup. Rule-based search.
+mongo-local:
 	docker compose up --build
 
-# Opt-in: atlas-local (Atlas Search) instead of mongo:8
-up-search:
+# MongoDB Atlas (atlas-local) — models the managed service. Enables Atlas $search.
+mongo-atlas:
 	docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
 
 down:

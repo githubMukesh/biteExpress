@@ -16,6 +16,7 @@ export class RestaurantService {
   constructor(
     private repo: RestaurantRepo,
     private tenantId: string,
+    private searchEngine: 'basic' | 'atlas' = 'basic',
   ) {}
 
   async create(input: TRestaurantCreate): Promise<IRestaurantDoc> {
@@ -106,6 +107,23 @@ export class RestaurantService {
     }
 
     const listQuery = listQuerySchema.parse(input);
+
+    // On atlas, route residual free text through fuzzy $search; the structured
+    // part (city/cuisine/price) still filters. Otherwise use the list path,
+    // where name is an anchored prefix match.
+    if (this.searchEngine === 'atlas' && listQuery.name) {
+      const { name, ...structured } = listQuery;
+      const docs = await this.repo.searchText(name, structured, this.tenantId);
+      const hasNext = docs.length > listQuery.limit;
+      return {
+        items: docs.slice(0, listQuery.limit).map(toListItem),
+        page: listQuery.page,
+        limit: listQuery.limit,
+        hasNext,
+        interpretedQuery: { ...parsed, searchMode: 'atlas-fuzzy' },
+      };
+    }
+
     const result = await this.list(listQuery);
     return { ...result, interpretedQuery: parsed };
   }

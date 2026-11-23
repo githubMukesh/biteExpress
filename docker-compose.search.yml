@@ -15,6 +15,10 @@ services:
     healthcheck:
       start_period: 40s
 
+  api:
+    environment:
+      SEARCH_ENGINE: atlas
+
 volumes:
   mongo-atlas-data:
   mongo-atlas-config:

@@ -25,7 +25,11 @@ export function buildApp({ config, mongo, logger }: IBuildAppOptions): Express {
   app.use(pinoHttp({ logger }));
   app.use(express.json());
 
-  const service = new RestaurantService(new RestaurantRepo(mongo.db), config.TENANT_ID);
+  const service = new RestaurantService(
+    new RestaurantRepo(mongo.db),
+    config.TENANT_ID,
+    config.SEARCH_ENGINE,
+  );
 
   app.use(healthRouter(mongo));
   app.use(ROUTES.restaurants, restaurantsRouter(service));

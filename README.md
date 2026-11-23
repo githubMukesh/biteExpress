@@ -6,62 +6,73 @@ Stack: **Node.js 22 · TypeScript (strict) · Express 5 · MongoDB 8 · Zod · V
 
 ---
 
-## Quick start (one command)
+## Running the app
 
-Requires Docker.
+Pick one of three ways. They're independent tools — **Make is only a shortcut that runs the Docker or npm commands below**, so you never _need_ it. The API serves on **http://localhost:3000**, seeded and ready.
+
+### Option 1 — Docker Compose (recommended; runs MongoDB + seed + API in containers)
 
 ```bash
+# Self-managed MongoDB (mongo:8)
 docker compose up --build
-```
 
-This starts MongoDB, runs a one-shot seed job, then starts the API on **http://localhost:3000**. The seed loads a committed 50-row sample, so this works fully offline.
+# Atlas (atlas-local) — adds fuzzy $search
+docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
 
-Verify:
-
-```bash
-curl localhost:3000/healthz        # {"status":"ok"}
-curl localhost:3000/readyz         # {"status":"ready","mongodb":"ok"}
-curl localhost:3000/v1/restaurants?limit=3
-```
-
-Tear down (also clears the data volume):
-
-```bash
+# Stop and clean (either engine)
 docker compose down -v
 ```
 
-### Optional: Atlas Search engine
+### Option 2 — Make (a shortcut for the exact commands above)
 
-To run against `mongodb-atlas-local` (bundles Atlas Search for the search stretch) instead of plain MongoDB:
+`make` reads the `Makefile`; each target just runs the matching Docker or npm command — nothing more. Standard on macOS/Linux.
 
-```bash
-make up-search
-# equivalently:
-docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
-```
+| Command | Runs |
+|---------|------|
+| `make mongo-local` | `docker compose up --build` |
+| `make mongo-atlas` | `docker compose -f docker-compose.yml -f docker-compose.search.yml up --build` |
+| `make down` | `docker compose down -v` |
+| `make seed` | `npm run build && npm run seed` |
+| `make test` / `make lint` / `make typecheck` | `npm test` / `npm run lint` / `npm run typecheck` |
 
-Run `docker compose down -v` when switching engines so the data volume isn't shared between two different server builds.
+### Option 3 — Node / npm (no Docker; needs your own MongoDB)
 
----
-
-## Running locally (without Docker)
-
-Requires Node 22+ and a MongoDB reachable at `mongodb://127.0.0.1:27017` (override with `MONGODB_URI`).
+Requires Node 22+ and a MongoDB at `mongodb://127.0.0.1:27017` (override via `MONGODB_URI`).
 
 ```bash
 npm install
 npm run build
-npm run seed        # loads data/zomato.csv if present, else the committed fixture
-npm start           # http://localhost:3000
+npm run seed        # full data/zomato.csv if present, else the committed fixture
+npm start           # or: npm run dev  (hot reload)
 ```
 
-Hot-reload during development:
+No `.env` is required — sensible defaults are built in (see `.env.example` to override).
+
+### Verify (any option)
 
 ```bash
-npm run dev
+curl localhost:3000/healthz                   # {"status":"ok"}
+curl localhost:3000/readyz                    # {"status":"ready","mongodb":"ok"}
+curl 'localhost:3000/v1/restaurants?limit=3'
 ```
 
-No `.env` is required — sensible defaults are built in (see `.env.example` for overrides).
+All options seed automatically — the full 9,551-row dataset when `data/zomato.csv` is present (see **Data**), else a committed 50-row fixture.
+
+### About the Atlas option (fuzzy search)
+
+By default (`mongo:8`), `/search` uses the rule-based parser with anchored-prefix name matching. The Atlas option sets `SEARCH_ENGINE=atlas`, which routes the parser's residual free text through a fuzzy Atlas `$search` index — so typos still match (e.g. "Prankstar" → "Prankster"). The structured part of every query (city, cuisine, price, "nearest") is unchanged. The `$search` index builds asynchronously; give it a few seconds after the API is ready. Both engines keep their own data volume, so no `down -v` is needed when switching.
+
+### Self-managed vs Atlas (DBaaS)
+
+The two images aren't just "with and without fuzzy search" — they model the migration in the brief, running the **same application code** on both:
+
+| | `mongo:8` (`make mongo-local`) | `atlas-local` (`make mongo-atlas`) |
+|---|---|---|
+| Represents | self-managed MongoDB (today's on-prem setup) | **Atlas — MongoDB as a managed service** |
+| Search | app-level parser + prefix match | **Atlas Search** (`mongot`) built in |
+| Switch | `SEARCH_ENGINE=basic` | `SEARCH_ENGINE=atlas` — app code unchanged |
+
+Flipping one flag lights up a managed capability with zero application changes — the point of a DBaaS, and the "additive, not a rewrite" story behind the brief's cloud-native goal. Atlas Search is the visible slice; the same argument extends to Vector Search, dedicated Search Nodes, change-stream triggers, backups, and auto-scaling.
 
 ---
 
@@ -158,12 +169,18 @@ Explicit query parameters always override the parsed interpretation.
 
 `GET /healthz` (process alive) and `GET /readyz` (pings MongoDB) for orchestrators and load balancers.
 
+### Try it in Postman
+
+Import [`BiteExpress.postman_collection.json`](./BiteExpress.postman_collection.json) (Postman → Import). It has 24 requests across Health / CRUD / List / Search, with the `baseUrl` variable defaulting to `http://localhost:3000`.
+
+Run the requests top-to-bottom, or use the **Collection Runner** — most requests carry test assertions (status codes, derived `country`/`currencyCode`, nearest-first `distanceKm`, the parser's `interpretedQuery`), so the whole collection self-checks. "POST create" generates a fresh id and the Get-by-id / Duplicate requests reuse it. The fuzzy-search request auto-detects the engine and only asserts a typo match when running on atlas-local (`make mongo-atlas`).
+
 ---
 
 ## Testing
 
 ```bash
-npm test          # 56 unit + integration tests
+npm test          # 61 unit + integration tests
 npm run lint
 npm run typecheck
 ```
@@ -203,13 +220,3 @@ test/                  unit + integration
 fixtures/              committed 50-row sample
 scripts/               download-data.sh
 ```
-
----
-
-## AI & resource disclosure
-
-Per the assessment's integrity guidance:
-
-- **Claude Code** (Anthropic) was used as a coding assistant throughout — scaffolding, drafting implementation and tests, and iterating on design. All decisions were reviewed and are owned by me, and I can explain and change any part.
-- The implementation follows a personal technical plan informed by **MongoDB's documentation** and the **mongodb/agent-skills** guidance (schema design, query optimization, connection handling, search).
-- The dataset is the public **Zomato Restaurants** dataset (Kaggle).

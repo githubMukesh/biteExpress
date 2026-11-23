@@ -8,7 +8,7 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config);
   const mongo = await createMongo(config);
-  await ensureSchema(mongo.db);
+  await ensureSchema(mongo.db, { searchEngine: config.SEARCH_ENGINE });
   const app = buildApp({ config, mongo, logger });
 
   const server = app.listen(config.PORT, config.HOST, () => {

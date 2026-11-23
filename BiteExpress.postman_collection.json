@@ -1,0 +1,512 @@
+{
+  "info": {
+    "name": "BiteExpress Restaurant Discovery API",
+    "description": "MongoDB FDE take-home. Set the `baseUrl` variable (default http://localhost:3000).\n\nRun requests top-to-bottom: **Create** sets `sourceId` and captures `publicId` into collection variables, which the Get-by-id and Duplicate requests reuse.\n\nFuzzy search only matches typos when the API runs on atlas-local (`SEARCH_ENGINE=atlas`, via `make up-search`); on `mongo:8` it falls back to prefix matching.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "sourceId", "value": "99000001" },
+    { "key": "publicId", "value": "acceptance:99000001" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/healthz", "host": ["{{baseUrl}}"], "path": ["healthz"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('status ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /readyz",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/readyz", "host": ["{{baseUrl}}"], "path": ["readyz"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('mongodb ok', () => pm.expect(pm.response.json().mongodb).to.eql('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Restaurants — CRUD",
+      "item": [
+        {
+          "name": "POST create",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = 99000000 + Math.floor(Math.random() * 100000);",
+                  "pm.collectionVariables.set('sourceId', String(id));",
+                  "pm.collectionVariables.set('publicId', 'acceptance:' + id);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 created', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('public id (no tenant)', () => pm.expect(b.id).to.eql(pm.collectionVariables.get('publicId')));",
+                  "pm.test('country derived', () => pm.expect(b.country).to.eql('India'));",
+                  "pm.test('currency derived', () => pm.expect(b.pricing.currencyCode).to.eql('INR'));",
+                  "pm.test('weighted rating computed', () => pm.expect(b.rating.weighted).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acceptance Diner\",\n  \"address\": { \"line\": \"Test Rd\", \"locality\": \"Test\" },\n  \"city\": \"Gurgaon\",\n  \"countryCode\": 1,\n  \"location\": { \"lng\": 77.09, \"lat\": 28.49 },\n  \"cuisines\": [\"South Indian\"],\n  \"pricing\": { \"costForTwo\": 600, \"currencySourceLabel\": \"Indian Rupees(Rs.)\" },\n  \"rating\": { \"average\": 4.4, \"votes\": 200 },\n  \"source\": { \"system\": \"acceptance\", \"sourceId\": {{sourceId}} }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants"] }
+          }
+        },
+        {
+          "name": "POST duplicate (409)",
+          "description": "Run after Create — reuses the same sourceId, so it collides on _id.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('409 conflict', () => pm.response.to.have.status(409));"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acceptance Diner\",\n  \"address\": { \"line\": \"Test Rd\", \"locality\": \"Test\" },\n  \"city\": \"Gurgaon\",\n  \"countryCode\": 1,\n  \"source\": { \"system\": \"acceptance\", \"sourceId\": {{sourceId}} }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants"] }
+          }
+        },
+        {
+          "name": "POST invalid (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 unprocessable', () => pm.response.to.have.status(422));",
+                  "pm.test('problem+json with errors', () => pm.expect(pm.response.json().errors).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"city\": \"Gurgaon\",\n  \"countryCode\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/v1/restaurants", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants"] }
+          }
+        },
+        {
+          "name": "GET by id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('same id', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('publicId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/v1/restaurants/{{publicId}}", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants", "{{publicId}}"] }
+          }
+        },
+        {
+          "name": "GET malformed id (400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('400', () => pm.response.to.have.status(400));"] }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/v1/restaurants/not-an-id", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants", "not-an-id"] }
+          }
+        },
+        {
+          "name": "GET missing id (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('404', () => pm.response.to.have.status(404));"] }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/v1/restaurants/acceptance:1", "host": ["{{baseUrl}}"], "path": ["v1", "restaurants", "acceptance:1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restaurants — List",
+      "item": [
+        {
+          "name": "List (default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('envelope', () => pm.expect(b).to.include.all.keys('items','page','limit','hasNext'));",
+                  "pm.test('required attributes', () => b.items.forEach(i => pm.expect(i).to.include.all.keys('id','name','address','city','country','cuisines','averageRating')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "limit", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Filter by city",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?city=Gurgaon&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "city", "value": "Gurgaon" }, { "key": "limit", "value": "5" }]
+            }
+          }
+        },
+        {
+          "name": "Filter by cuisines (any)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?cuisines=South Indian&cuisine_match=any",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "cuisines", "value": "South Indian" }, { "key": "cuisine_match", "value": "any" }]
+            }
+          }
+        },
+        {
+          "name": "Filter by min_rating",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?min_rating=4",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "min_rating", "value": "4" }]
+            }
+          }
+        },
+        {
+          "name": "Name prefix",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?name=Saravana",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "name", "value": "Saravana" }]
+            }
+          }
+        },
+        {
+          "name": "Geo — nearest first",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const it = pm.response.json().items;",
+                  "pm.test('distanceKm present', () => it.forEach(i => pm.expect(i).to.have.property('distanceKm')));",
+                  "pm.test('ascending distance', () => { for (let k=0;k<it.length-1;k++) pm.expect(it[k].distanceKm).to.be.at.most(it[k+1].distanceKm); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?lat=28.49&lng=77.09&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "lat", "value": "28.49" }, { "key": "lng", "value": "77.09" }, { "key": "limit", "value": "5" }]
+            }
+          }
+        },
+        {
+          "name": "Geo — within radius",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?lat=28.49&lng=77.09&radius_km=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "lat", "value": "28.49" }, { "key": "lng", "value": "77.09" }, { "key": "radius_km", "value": "2" }]
+            }
+          }
+        },
+        {
+          "name": "Sort by cost asc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?city=Gurgaon&sort=cost&order=asc&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "city", "value": "Gurgaon" }, { "key": "sort", "value": "cost" }, { "key": "order", "value": "asc" }, { "key": "limit", "value": "5" }]
+            }
+          }
+        },
+        {
+          "name": "Pagination (page 2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?city=Gurgaon&limit=5&page=2",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "city", "value": "Gurgaon" }, { "key": "limit", "value": "5" }, { "key": "page", "value": "2" }]
+            }
+          }
+        },
+        {
+          "name": "Invalid — sort=distance no coords (422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('422', () => pm.response.to.have.status(422));"] }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants?sort=distance",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants"],
+              "query": [{ "key": "sort", "value": "distance" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restaurants — Search (NL)",
+      "item": [
+        {
+          "name": "Brief #1 — Best in Gurgaon, South Indian",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const q = pm.response.json().interpretedQuery;",
+                  "pm.test('interpreted', () => { pm.expect(q.city).to.eql('gurgaon'); pm.expect(q.sort).to.eql('rating'); pm.expect(q.min_rating).to.eql(4); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=Best restaurants in Gurgaon with South Indian Food",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [{ "key": "q", "value": "Best restaurants in Gurgaon with South Indian Food" }]
+            }
+          }
+        },
+        {
+          "name": "Brief #2 — Gurgaon under Rs. 1000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const q = pm.response.json().interpretedQuery;",
+                  "pm.test('interpreted', () => { pm.expect(q.city).to.eql('gurgaon'); pm.expect(q.max_cost_for_two).to.eql(1000); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=Restaurants in Gurgaon under Rs. 1000 for two",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [{ "key": "q", "value": "Restaurants in Gurgaon under Rs. 1000 for two" }]
+            }
+          }
+        },
+        {
+          "name": "Brief #3 — Nearest Vada Pav (400 no coords)",
+          "event": [
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": ["pm.test('400', () => pm.response.to.have.status(400));"] }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=Nearest place that serves Vada Pav",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [{ "key": "q", "value": "Nearest place that serves Vada Pav" }]
+            }
+          }
+        },
+        {
+          "name": "Brief #3 — Nearest Vada Pav (with coords)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('distance sort', () => pm.expect(pm.response.json().interpretedQuery.sort).to.eql('distance'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=Nearest place that serves Vada Pav&lat=28.49&lng=77.09",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [
+                { "key": "q", "value": "Nearest place that serves Vada Pav" },
+                { "key": "lat", "value": "28.49" },
+                { "key": "lng", "value": "77.09" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Explicit param overrides parse",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=best in gurgaon&city=New Delhi",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [{ "key": "q", "value": "best in gurgaon" }, { "key": "city", "value": "New Delhi" }]
+            }
+          }
+        },
+        {
+          "name": "Fuzzy typo (atlas-local only)",
+          "description": "Matches 'Prankster' despite the typo only when running on atlas-local (make up-search). On mongo:8 it falls back to prefix matching and may return nothing.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "if (b.interpretedQuery.searchMode === 'atlas-fuzzy') {",
+                  "  pm.test('fuzzy matches Prankster', () => pm.expect(b.items.some(i => /Prankster/.test(i.name))).to.be.true);",
+                  "} else {",
+                  "  console.log('basic engine — fuzzy not active (run make up-search)');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/restaurants/search?q=Prankstar in gurgaon",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "restaurants", "search"],
+              "query": [{ "key": "q", "value": "Prankstar in gurgaon" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

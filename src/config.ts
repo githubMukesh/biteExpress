@@ -12,6 +12,9 @@ const envSchema = z.object({
   MONGODB_MAX_POOL_SIZE: z.coerce.number().int().positive().default(20),
   MONGODB_MIN_POOL_SIZE: z.coerce.number().int().nonnegative().default(2),
 
+  // 'atlas' enables fuzzy $search for residual text; 'basic' uses prefix matching.
+  SEARCH_ENGINE: z.enum(['basic', 'atlas']).default('basic'),
+
   TENANT_ID: z.string().min(1).default('biteexpress'),
 });
 

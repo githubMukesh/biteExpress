@@ -6,5 +6,13 @@
 services:
   mongo:
     image: mongodb/mongodb-atlas-local:latest
+    # Dedicated volume: atlas-local initializes a replica-set keyfile on a fresh
+    # data dir and aborts on a dir a plain mongo:8 already wrote, so it must not
+    # share mongo:8's volume.
+    volumes:
+      - mongo-atlas-data:/data/db
     healthcheck:
       start_period: 40s
+
+volumes:
+  mongo-atlas-data:

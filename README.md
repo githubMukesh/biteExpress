@@ -23,15 +23,17 @@ docker compose -f docker-compose.yml -f docker-compose.search.yml up --build
 docker compose down -v
 ```
 
-### Option 2 — Make (a shortcut for the exact commands above)
+> **Restarting the Atlas engine:** atlas-local must initialize fresh each run. `Ctrl+C` only *stops* containers, so a plain re-`up` reuses stale replica-set state and can fail to start. When re-running the Atlas engine, either `docker compose … down -v` first, or add `--force-recreate --renew-anon-volumes` to the `up`. **`make mongo-atlas` does this for you** — prefer Option 2. (`mongo:8` is unaffected.)
 
-`make` reads the `Makefile`; each target just runs the matching Docker or npm command — nothing more. Standard on macOS/Linux.
+### Option 2 — Make (resets first, then runs the commands above)
+
+`make` reads the `Makefile`; each target runs the matching Docker/npm command — and the engine targets **tear down first** so Atlas always initializes cleanly, whatever the previous run did. Standard on macOS/Linux.
 
 | Command | Runs |
 |---------|------|
-| `make mongo-local` | `docker compose up --build` |
-| `make mongo-atlas` | `docker compose -f docker-compose.yml -f docker-compose.search.yml up --build` |
-| `make down` | `docker compose down -v` |
+| `make mongo-local` | `docker compose down -v` → `docker compose up --build` |
+| `make mongo-atlas` | `docker compose -f … -f docker-compose.search.yml down -v` → `up --build` |
+| `make down` | `docker compose down -v --remove-orphans` |
 | `make seed` | `npm run build && npm run seed` |
 | `make test` / `make lint` / `make typecheck` | `npm test` / `npm run lint` / `npm run typecheck` |
 
